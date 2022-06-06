@@ -1,0 +1,13 @@
+user.name=kfoxone
+user.email=RaphaelHendrick@gmail.com
+user.signingkey=rsa3072
+gpg.program=C:\ME\Git\usr\bin\
+kfoxone.signingkey=rsa3072
+commit.gpgsign=true
+core.editor="C:\Users\r.hendrick\AppData\Local\Programs\Microsoft VS Code\bin\code" --wait
+core.fsmonitor=true
+gui.recentrepo=C:/Users/r.hendrick/Documents/Arduino/NauthyBeans
+filter.lfs.process=git-lfs filter-process
+filter.lfs.required=true
+filter.lfs.clean=git-lfs clean -- %f
+filter.lfs.smudge=git-lfs smudge -- %f
