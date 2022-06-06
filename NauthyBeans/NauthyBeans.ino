@@ -248,7 +248,7 @@ MCPPIN _bus26[16] = {{PA0, OUTPUT, "PL1L09"},
                 {PB7, OUTPUT, "PL2L10"}
                  };
 
-
+ 
 MCPDevice IO24;
 MCPDevice IO25;
 MCPDevice IO26;
