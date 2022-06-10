@@ -15,6 +15,18 @@
         #endif
     }
 
+    static void ndbg(String str){
+        #ifdef UTIL_DBGN
+        Serial.println(str);
+        #endif
+    }
+
+    static void ndbgnl(String str){
+        #ifdef UTIL_DBGN
+        Serial.print(str);
+        #endif
+    }
+
     static void log(String str){
         Serial.println(str);
     

@@ -2,9 +2,40 @@
 #define     LCDSCHAR_H
 
 
+#include<iostream>
 
 
 // https://maxpromer.github.io/LCD-Character-Creator/
+
+
+class LCDChar {
+
+public:
+    /// Name of the char or Symbol
+    String  _name = "";
+
+    /// Corresponding structure byte
+    uint8_t _value[8] = { 
+                        B11111,
+                        B11111,
+                        B11111,
+                        B11111,
+                        B11111,
+                        B11111,
+                        B11111,
+                        B11111
+                        };
+};
+
+class LCDChars {
+
+public:
+    
+
+private: 
+    LCDChar *_lcdChars;
+};
+
 
 
 

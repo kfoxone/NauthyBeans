@@ -11,7 +11,10 @@
 //We always have to include the library
 #include "LedControl.h"
 
-
+// 7SEGMENT ADDR
+#define DISP_SYSTEM   1
+#define DISP_PLAYER1  0
+#define DISP_PLAYER2  2
 
 
 

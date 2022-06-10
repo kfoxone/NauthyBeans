@@ -13,12 +13,7 @@
 
 
 
-#define SD3   9   // For NodeMCU V3
-#define SD2   10  // For NodeMCU V3
 
-#define CLK   D6   // encoder clk
-#define DT    SD3  // encoder dt
-#define SW    D0   // Rotari swtich
 
 
 
@@ -28,45 +23,45 @@
 class RotationCommand {
 
 public: 
-  RotationCommand(){
-    
+  RotationCommand(uint8_t sw, uint8_t dt, uint8_t clk){
+    pinMode(sw, INPUT_PULLUP);
+    pinMode(clk, INPUT);
+    pinMode(dt, INPUT);
   }
 
 
   void initialize(){
-    pinMode( SW, INPUT_PULLUP );
-    pinMode (CLK, INPUT);
-    pinMode (DT, INPUT);
-    //rotationCnt = digitalRead(CLK);
+    // pinMode( SW, INPUT_PULLUP );
+    // pinMode (CLK, INPUT);
+    // pinMode (DT, INPUT);
+    // //_encoderCounter = digitalRead(CLK);
   }
 
 
   bool isSWOn(){
-    //int value = digitalRead(SW);
-    if (digitalRead(SW) == 0) {
+    _switchLastSate = digitalRead(_swpin)==HIGH?false:true;
+    if (_switchLastSate == false) {
       return true;
     }
     return false;
   }
 
-  void resetRotationCnt (int val = 0){
-    rotationCnt = val;
-  }
 
-  int getRotationCnt() const {
-    return rotationCnt;
-  }
 
+  /** *************************************************************************
+   * @brief Do run is main running process if btn is turning
+   * 
+   * *************************************************************************/
   void doRun(){
-    int vclk = digitalRead(CLK);
-    int vdt  = digitalRead(DT);
+    int vclk = digitalRead(_clkpin);
+    int vdt  = digitalRead(_dtpin);
 
-#ifdef _DBG
     if (vclk != _vclk or vdt != _vdt) {
-      std::string str = "RotationCommand >> doRun << Loop = " + std::to_string(looper) + " [CLK, DT] = [" + std::to_string(vclk) + "," + std::to_string(vdt) + "]";
-      Serial.println(str.c_str());
+      ndbg("RotationCommand >> doRun <<  [CLK, DT] = [" + String(vclk) + "," + String(vdt) + "]");
+    }else{
+      _encoderChanged = false;
+      return;
     }
-#endif
 
     // -----------
     // STEP 1 : Check which is first enable clk or dt with priority on clk
@@ -74,36 +69,28 @@ public:
     if (vclk == 0 and vdt == 1) {
       clkFirst = true;
       dtFirst = false;
-#ifdef _DBG
-      std::string str = "RotationCommand >> doRun << try to go right";
-      Serial.println(str.c_str());
-#endif  
+      ndbg("RotationCommand >> doRun << try to go right");
     } else if (vclk == 1 and vdt == 0) {
       dtFirst = true;
       clkFirst = false;
-#ifdef _DBG
-      std::string str = "RotationCommand >> doRun << try to go left";
-      Serial.println(str.c_str());
-#endif
+      ndbg("RotationCommand >> doRun << try to go left");
     }
 
     // -----------
     // STEP 2 : With priority on clock wise, increment rotary or décrement roty
     // -----------
     if(clkFirst and vdt ==0){
-#ifdef _DBG
-      std::string str = "RotationCommand >> doRun << Go Right !";
-      Serial.println(str.c_str());
-#endif
+      ndbg("RotationCommand >> doRun << Go Right !");
       clkFirst = false;
-      rotationCnt++;
+      _encoderCounter++;
+      _encoderMemory = _encoderCounter -1;
+      _encoderChanged=true;
     }else if(dtFirst and vclk==0){
-#ifdef _DBG
-      std::string str = "RotationCommand >> doRun << Go Left !";
-      Serial.println(str.c_str());
-#endif
+      ndbg("RotationCommand >> doRun << Go Left !");
       dtFirst = false;
-      rotationCnt--;
+      _encoderCounter--;
+      _encoderMemory = _encoderCounter +1;
+      _encoderChanged=true;
     }
 
 
@@ -115,8 +102,77 @@ public:
     _vdt = vdt;
   }
 
+
+
+
+
+  /** *************************************************************************
+   * @brief Reset the encoder 
+   * 
+   * Default reset is set to zero you can change val of reset
+   * 
+   * @param val defaut 0 otherwise if change rest to val defined
+   * *************************************************************************/
+  void resetEncoderCounter (int val = 0){
+    _encoderCounter = val;
+  }
+
+
+  //===========================================================================
+  //===========================================================================
+  //  GETTER / SETTER
+  //===========================================================================
+  //===========================================================================
+
+  /// Get encoder counter  
+  int getEncoderCounter() const {
+    return _encoderCounter;
+  }
+  /// Set encoder counter
+  void setEncoderCounter(int encoderCounter = 0){
+    _encoderCounter = encoderCounter;
+  }
+
+  /// Get encoder Changed
+  bool isEncoderChanged() const {
+    return _encoderChanged;
+  }
+  bool getEncoderChanged() const {
+    return _encoderChanged;
+  }
+  /// Set encoder Changed
+  void setEncoderChanged(bool encoderChanged = true){
+    _encoderChanged = encoderChanged;
+  }
+
+  /// Get Last Switch State
+  bool getSwitchLastState() const {
+    return _switchLastSate;
+  }
+  /// Set last switch state
+  void setSwitchLastState(bool state = false){
+    _switchLastSate = state;
+  }
+
+
+
 private:
-  int rotationCnt = 0;
+  /// IDENTIFIY SWITCH INPUT PIN
+  uint8_t _swpin;
+  /// IDENTIFY CLK PIN
+  uint8_t _clkpin;
+  /// IDENTIFY DT PIN
+  uint8_t _dtpin;
+
+  /// LAST SWITCH INPUT READ
+  bool _switchLastSate;
+
+  /// Main encoder 
+  int _encoderCounter = 0;
+  /// Encoder Memory save last value of encoder
+  int _encoderMemory = 0;
+  /// Encoder Changed indicate if encoder as change
+  bool _encoderChanged = false;
   
   int _vclk, _vdt;
   bool clkFirst = false;

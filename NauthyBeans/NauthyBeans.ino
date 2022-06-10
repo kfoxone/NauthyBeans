@@ -72,6 +72,9 @@
 #define ADC       A0
 #define sensorIn  A0;
 
+#define CLK   D6   // encoder clk
+#define DT    SD3  // encoder dt
+#define SW    D0   // Rotari swtich
 
 
 #define INTERRUPTED_PIN D4          // Interrupt Pin
@@ -80,10 +83,7 @@
 /// HARDWARE DIVICE
 #define harwareCnt    7
 
-// 7SEGMENT ADDR
-#define DISP_SYSTEM   1
-#define DISP_PLAYER1  0
-#define DISP_PLAYER2  2
+
 
 
 
@@ -92,6 +92,7 @@
 #define _DBG
 // Allow to DEBUG UNDERDESCRIPTION
 //#define _DBGA
+//#define _DBGB
 
 
 
@@ -102,32 +103,7 @@
  *
  *
  * ==========================================================================*/
-enum broche {
-  pl100 =  0,
-  pl101 =  1,
-  pl102 =  2,
-  pl103 =  3,
-  pl104 =  4,
-  pl105 =  5,
-  pl106 =  6,
-  pl107 =  7,
-  pl108 =  8,
-  pl109 =  9,
-  Start =  10,
-  free0 =  11,
-  free1 =  12,
-  free2 =  13,
-  pl200 =  14,
-  pl201 =  15,
-  pl202 =  0,
-  pl203 =  1,
-  pl204 =  2,
-  pl205 =  3,
-  pl206 =  4,
-  pl207 =  5,
-  pl208 =  6,
-  pl209 =  7,
-};
+
 
 
 // ============================================================================
@@ -190,7 +166,7 @@ Disp2b7Seg _lc;
 /* **************************
     Gestion à l'aide du bouton menu
  * **************************/
-RotationCommand _rtC = RotationCommand();
+RotationCommand *_rotationCommand;
 
 
 /* **************************
@@ -265,15 +241,18 @@ double _AmpsRMS = 0;      // Valeur de courant en Ampère RMS
 
 /// FightGame
 FightGame *_fgame ;
-/// Specify need to be start and initiate game
-bool _fightGame_start = true;
-/// Specify game is in running mode
-bool _fightGame_running = false;
 
 
 
+/// Loop counter
 int _looper = 0;
+/// Elapse time over loops
 unsigned long _elapse_time_looper = millis();
+/// Measure of the loop duration
+double _loop_duration_ms = 0.000;
+
+
+/// I2C Timeout vaidation
 #define TIEMOUT_I2C_VALIDATION  5000
 
 // ============================================================================
@@ -516,11 +495,9 @@ void setup_SPI(){
  * 
  * ****************************************************************************/
 void setup_rotationCommand(){
-  elapseTime = onElapse(elapseTimePrev);
-  lcd.lpush("Ready after " + std::to_string(elapseTime / 1000));
-  
   // Initialize rotary command for NodeMCU
-  _rtC.initialize();
+  _rotationCommand = new RotationCommand(SW, DT, CLK);
+  _rotationCommand->initialize();
   
 }
 
@@ -597,6 +574,10 @@ void setup() {
   _menu->add(voltage);
   _menu->add(light);
 
+
+  elapseTime = onElapse(elapseTimePrev);
+  lcd.lpush("Ready after " + std::to_string(elapseTime / 1000));
+
   _elapse_time_looper = millis();
 }
 
@@ -605,11 +586,11 @@ void setup() {
 
 
 
-/**
+/** ***************************************************************************
  * @brief Loop read input Image
  * 
- * 
- */
+ * Convenient method to read input value from start
+ * ***************************************************************************/
 void loop_input(){
   // if(!IO24.isNull()){
   //   IO24.readInput();
@@ -626,9 +607,7 @@ void loop_input(){
   //
   // FightGame
   //
-  if(_fightGame_running){
-    fightGame_pullIn();
-  }
+  _fgame->pushIn(IO24, IO25);
 
 
   //
@@ -642,23 +621,20 @@ void loop_input(){
 
 
 
-/**
+/** ***************************************************************************
  * @brief Output Loop to write output
  * 
- */
+ * Convenient method to set output value at end
+ * ***************************************************************************/
 void loop_output(){
   // 
   // FightGame
   //
-  if(_fightGame_running){
-    fightGame_pushOut();
-  }
+  _fgame->pushOut(IO25, IO26);
+
 }
 
 
-
-
-//#define _DBGB
 
 
 /** ***************************************************************************
@@ -668,23 +644,21 @@ void loop_output(){
  *
  * ***************************************************************************/
 void loop() {
-
-  #ifdef _DBGB
-  Serial.println("Start loop " + looper);
-  #endif
-
+  //
   // RESET LOOP CONTROLLEUR
+  //
   _looper++;
-  if (_looper > 100000)  _looper = 0;
-
   if(millis()-_elapse_time_looper >= 5000){ // 5s
-    dbg("NauthyBeans >> loop >> Average loop time = " + String((millis()-_elapse_time_looper)/5000.000) + "ms");
-    _looper = 0;
+    _loop_duration_ms = (millis()-_elapse_time_looper)/5000.000;
+    log("NauthyBeans >> loop >> Average loop time = " + String(_loop_duration_ms) + "ms");
+    _looper = 1;
     _elapse_time_looper = millis();
   }
 
 
+  //
   // Go to initialisation system
+  //
   static uint64_t i2cValidationTimeout = millis();
   //while (!setup_i2cValidation() and millis()-i2cValidationTimeout <= TIEMOUT_I2C_VALIDATION)  delay(1000);
 
@@ -692,9 +666,6 @@ void loop() {
   //
   // READ INPUT STATE
   // 
-  #ifdef _DBGB
-  Serial.println("Go to loop input ");
-  #endif
   loop_input();
 
 
@@ -702,10 +673,23 @@ void loop() {
   //
   // Process Fight Game
   //
-  fightGame_run();
+  _fgame->run(IO24, IO25, IO26);
+
+
 
   //
-  // Oled display loop
+  // Manage RotationCommand for menu ! 
+  //
+  if(_rotationCommand->isSWOn()){
+    dbg("NauthyBeans >> Loop >> rtC push down !");
+  }
+  _rotationCommand->doRun();
+  if(_rotationCommand->isEncoderChanged()){
+    dbg("NauthyBeans >> Loop >> rtC encoder changed = " + String(_rotationCommand->getEncoderCounter()));
+  }
+  
+  //
+  // LCD display loop
   //
   _menu->on_show(&lcd);
 
@@ -713,20 +697,11 @@ void loop() {
   //
   // TESTING TOOL
   //
-  #ifdef _DBGB
-  Serial.println("Go to testing tool");
-  #endif
   //testOnState();
   //testBlinkAll(500);
   //testSequence(250);
   //testSequenceBtn(5000, IO24, IO25, IO26);
-
-
-
-
-
-
-  // WS2812B
+  // Test WS2812B
   //loop_ws2812B();
   //loop_ColorPalette();
 
@@ -739,16 +714,7 @@ void loop() {
 
 
 
-  //
-  // Manage RotationCommand for menu ! 
-  //
-  if(_rtC.isSWOn()){
-    //lpush("rtC Pushed! L=" + std::to_string(looper));
-    _rtC.resetRotationCnt();
-  }
-  _rtC.doRun();
-  //_lc.printNumber(_rtC.getRotationCnt(), DISP_SYSTEM, false);
-  
+
 
 
 
@@ -808,244 +774,13 @@ void processAmps(){
 //=============================================================================
 
 
-/** ***************************************************************************
- * @brief Initialise Fight Game
- * 
- * 
- * ***************************************************************************/
-void fightGame_init(){
-  // 
-  /// FightGame
-  Player p1("Joleen", 0);
-  Player p2("Shelly", 0);
-  Serial.println("NauthyBeans >> fightGame_init << Create Player finished !");
-  _fgame = new FightGame(p1, p2);
-  Serial.println("NauthyBeans >> fightGame_init << fight game creation finished !");
-  _fgame->init();
-  Serial.println("NauthyBeans >> fightGame_init << fight game initialisation finished !");
-}
-
-
-/** ***************************************************************************
- * @brief 
- * 
- * ***************************************************************************/
-void fightGame_pushOut(){
-  // Player 1
-  for(int i = 0; i < 10; i++){
-    bool ledState = _fgame->getPlayer1()->getLed(i);
-    if(ledState==true){
-      if(i<8){
-        IO25.onB(i);
-      }else{
-        IO26.onA(i-8);
-      }
-    }else{
-      if(i<8){
-        IO25.offB(i);
-      }else{
-        IO26.offA(i-8);
-      }
-    }
-  }
-
-  // Player 2
-  for(int i = 0; i < 10; i++){
-    bool ledState = _fgame->getPlayer2()->getLed(i);
-    if(ledState==true){
-      if(i<2){
-        IO26.onA(i+6);
-        //dbg("NauthyBeans >> fightGame_pushOUt >> i = " + String(i) + " state : true and write on IO26.PA" + String(i+6));
-      }else{
-        IO26.onB(i-2);
-      }
-    }else{
-      if(i<2){
-        IO26.offA(i+6);
-        //dbg("NauthyBeans >> fightGame_pushOUt >> i = " + String(i) + " state : false and write off IO26.PA" + String(i+6));
-      }else{
-        IO26.offB(i-2);
-      }
-    }
-  }
-}
-
-/** ***************************************************************************
- * @brief  fightGame_pullIn
- * From input readed affected player input state.
- * 
- * ***************************************************************************/
-void fightGame_pullIn(){
-  // dbg("NauthyBeans >> FightGame_pullIn >> Start ...");
-
-  if(!IO24.isNull()){
-    for(int i = 0; i < 16; i++){
-      if(!IO24.isNull()){
-        if(i<10){
-          _fgame->getPlayer1()->setInput(i, IO24.isOnRise(i));
-        }else if(i >=14){
-          _fgame->getPlayer2()->setInput(i-14, IO24.isOnRise(i));
-        }
-      }
-
-      if(!IO25.isNull()){
-        if(i<8){
-          _fgame->getPlayer2()->setInput(i+2, IO25.isOnRise(i));
-        }
-      }
-    }
-  }
-}
-
-
-
-
-/** ***************************************************************************
- * @brief  Fight Game running main process
- * 
- * ***************************************************************************/
-
-//  static uint64_t elapseTimeToStartGame = 
-void fightGame_run(){
-  static uint64_t elapseTimeToResetGame = millis();
-  static uint64_t elapseTimeToFinishGame = millis();
-  static uint64_t elapseDisplayTime = millis();
-  static uint64_t elapseFinishGameTime = millis();
-  static uint64_t elapseDisplayRstBlinkTime = millis();
-
-  // 
-  if(!IO24.isNull() and !_fightGame_start){
-    if(!IO24.isOn(broche::Start)){
-      uint64_t elapseResetMs = millis()-elapseTimeToResetGame;
-      
-      if(millis()-elapseDisplayTime>=1000){
-        dbg("NauthyBeans >> fightGame_run >> Reset count down " + String((5000-elapseResetMs)/1000));
-      }
-      if(elapseResetMs >= 5000){ // 5secs
-        _fightGame_start = true;
-        elapseTimeToResetGame =  millis();
-        if(millis()-elapseDisplayTime>=1000){
-          dbg("NauthyBeans >> fightGame_run >> reset done by restarting the game !");
-        }
-      }
-      // Affichage clignotement led central reset.
-      if(!IO26.isNull()){
-        if(millis()-elapseDisplayRstBlinkTime<=500){
-          IO26.onA(2);
-        }else{
-          IO26.offA(2);
-          if(millis()-elapseDisplayRstBlinkTime>=1000){
-            elapseDisplayRstBlinkTime=millis();
-          }
-        }
-      }
-    }else{
-      elapseTimeToResetGame =  millis();
-      elapseDisplayTime = millis();
-      elapseDisplayRstBlinkTime=millis();
-    }
-  }else{
-    // Indicate options is available
-    if(!IO26.isNull()){
-      IO26.onA(2);
-    }
-  }
 
 
 
 
 
 
-  // 
-  // Operate evrything while gamme is running
-  //
-  if(_fightGame_running){
-    //
-    _fgame->run();
-    
-    // Calculate remaining time
-    elapseFinishGameTime = millis() - elapseTimeToFinishGame;
-    _fgame->setRemainingTime(_fgame->getPresetGameTime() - elapseFinishGameTime);
-    //dbg("NauthyBeans >> FightGame_run >> ElpaseFinishGameTime = " + String(elapseFinishGameTime) + " ElapseTimeToFinishGame = " + String(elapseTimeToFinishGame));
 
-    // 
-    if(elapseFinishGameTime >= _fgame->getPresetGameTime()){ // 60000
-      _fightGame_running = false;
-
-      if(_fgame->getPlayer1()->getScore()>_fgame->getPlayer2()->getScore()){
-        ws2812BColorFirstHalf(CRGB::Red);
-        ws2812BColorSecondHalf(CRGB::Green);
-      }else if(_fgame->getPlayer1()->getScore()<_fgame->getPlayer2()->getScore()){
-        ws2812BColorFirstHalf(CRGB::Green);
-        ws2812BColorSecondHalf(CRGB::Red);
-      }else{
-        ws2812BColorAll(CRGB::Orange);
-      }
-    }else{
-      loop_ColorPalette();
-    }
-
-    // Process scoring
-    // Player 1
-    _lc.printNumber(_fgame->getPlayer1()->getScore(), DISP_PLAYER1);
-    _lc.printNumber((int)_fgame->getRemainingTime()/1000, DISP_PLAYER1, true);
-
-    // Player 2
-    _lc.printNumber(_fgame->getPlayer2()->getScore(), DISP_PLAYER2);
-    _lc.printNumber((int)_fgame->getRemainingTime()/1000, DISP_PLAYER2, true);
-
-    // System
-    static uint64_t elapseTimeDisplaySystem = millis();
-    static int fightGame_SysSequence = 0;
-    if(millis()-elapseTimeDisplaySystem >= 1000){
-      switch(fightGame_SysSequence){
-        case 0 : // Score for player 1
-          _lc.printTextLR("PL01", DISP_SYSTEM);
-          _lc.printNumber(_fgame->getPlayer1()->getScore(), DISP_SYSTEM);
-          fightGame_SysSequence++;
-          elapseTimeDisplaySystem = millis();
-          break;
-        case 1 : // Score for player 2
-          _lc.printTextLR("PL02", DISP_SYSTEM);
-          _lc.printNumber(_fgame->getPlayer2()->getScore(), DISP_SYSTEM);
-          fightGame_SysSequence++;
-          elapseTimeDisplaySystem = millis();
-          break;
-        case 2 :
-          _lc.printTextLR("SECS", DISP_SYSTEM);
-          _lc.setRow(DISP_SYSTEM, 7, 0B01011011); // S
-          _lc.setRow(DISP_SYSTEM, 5, 0B01001110); // C
-          _lc.setRow(DISP_SYSTEM, 4, 0B01011011); // S
-          _lc.printNumber((int)_fgame->getRemainingTime()/1000, DISP_SYSTEM);
-          //fightGame_SysSequence++;
-          fightGame_SysSequence = 0;
-          elapseTimeDisplaySystem = millis();
-          break;
-        default:
-          dbg("NauthyBeans >> fightGame_run >> Undefine switch sequence back to 0!");
-          fightGame_SysSequence = 0;
-          break;
-      }
-    }
-
-
-  }
-
-
-
-
-  //
-  // SET Everything when game need to start
-  //
-  if(_fightGame_start){
-    fightGame_init();
-    _fightGame_start = false;
-    _fightGame_running = true;
-    ws2812BTurnOff();
-    elapseTimeToFinishGame = millis();
-    _fgame->scoreClear();
-  }
-}
 
 
 
