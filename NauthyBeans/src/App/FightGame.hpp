@@ -28,11 +28,11 @@
 //
 #include "../Afficheur/disp2b7Seg.h"
 
+// CONFIGAPP
+//
+#include "../App/ConfigApp.hpp"
 
-// 7SEGMENT ADDR
-#define DISP_SYSTEM   1
-#define DISP_PLAYER1  0
-#define DISP_PLAYER2  2
+
 
 
 
@@ -50,12 +50,14 @@ class FightGame {
 
       _lc = lc;
     }
-    // FightGame(std::string namePlayer1, std::string namePlayer2 = "U" + std::to_string(millis())){
-    //    _player1 = Player(namePlayer1); 
-    //    _player2 = Player(namePlayer2);  
-    //    defaultUser();
-    
-    // }
+     FightGame(std::string namePlayer1, 
+              std::string namePlayer2 = "U" + std::to_string(millis()),
+              Disp2b7Seg *lc = new Disp2b7Seg()){
+        _player1 = Player(namePlayer1); 
+        _player2 = Player(namePlayer2);  
+        defaultUser();
+        _lc = lc;
+    }
 
   public:
     Player* getPlayer1(){ return & _player1; }
@@ -67,7 +69,6 @@ class FightGame {
      */
     void process(){
       for(int i = 0; i < 10; i++){
-        
         // Run On Player 1
         if(_player1.getInput(i)==true and _player1.getLed(i)==true){
           // Displayer new defined vector
@@ -86,7 +87,13 @@ class FightGame {
           dbg("");
         }else if(_player1.getInput(i)==true and _player1.getLed(i)==false){
           // Wrong activage remove point
+          dbg("FightGame >> process >> _player1 Wrong activation Button ! ");
           _player1.scoreSub();
+        }
+
+        if(i==9 and _player1.getInput(i)==true){
+          dbg("FightGame >> process >> _player1 step 9 button is pushed ! ");
+          
         }
 
 
@@ -109,6 +116,7 @@ class FightGame {
           dbg("");
         }else if(_player2.getInput(i)==true and _player2.getLed(i)==false){
           // Wrong activage remove point
+          dbg("FightGame >> process >> _player2 Wrong activation Button ! ");
           _player2.scoreSub();
         }
       }
@@ -157,24 +165,35 @@ class FightGame {
      * 
      * Only first byte on portB is managed
      * ***************************************************************************/
-    void pushIn(MCPDevice inA, MCPDevice inB){
-      if(!inA.isNull()){
-        for(int i = 0; i < 16; i++){
-          if(!inA.isNull()){
-            if(i<10){
-              _player1.setInput(i, inA.isOnRise(i));
-            }else if(i >=14){
-              _player2.setInput(i-14, inA.isOnRise(i));
-            }
-          }
+    void pushIn(MCPDevice *inA, MCPDevice *inB){
+      // if(!_running){
+      //   ndbg("FightGame >> pushIn >> Game is not running !");
+      //   return;
+      // }
 
-          if(!inB.isNull()){
-            if(i<8){
-              _player2.setInput(i+2, inB.isOnRise(i));
-            }
+      for(int i = 0; i < 16; i++){
+        if(!inA->isNull()){
+          ndbg("FightGame >> pushIn >> inA is Ok !");
+          if(i<10){
+            getPlayer1()->setInput(i, inA->isOnRise(i));
+          }else if(i >=14){
+            getPlayer2()->setInput(i-14, inA->isOnRise(i));
+          }
+        }
+
+        if(!inB->isNull()){
+          ndbg("FightGame >> pushIn >> inB is Ok !");
+          if(i<8){
+            getPlayer2()->setInput(i+2, inB->isOnRise(i));
           }
         }
       }
+      ndbg("FightGame >> PLAYER 01 : =================================");
+      //showVector(getPlayer1()->getInputs());
+      ndbg("");
+      ndbg("FightGame >> PLAYER 02 : =================================");
+      //nshowVector(getPlayer2()->getInputs());
+      ndbg("");
     }
 
     /** ***************************************************************************
@@ -185,6 +204,7 @@ class FightGame {
      * ***************************************************************************/
     void pushOut(MCPDevice outB, MCPDevice outC){
       if(!_running){
+        ndbg("FightGame >> pushOut >> Game is not running !");
         return;
       }
 
@@ -237,7 +257,7 @@ class FightGame {
       static uint64_t elapseFinishGameTime = millis();
       static uint64_t elapseDisplayRstBlinkTime = millis();
 
-      // 
+      // CONTROLING RESTART GAME
       if(!inA.isNull() and !_start){
         if(!inA.isOn(broche::Start)){
           uint64_t elapseResetMs = millis()-elapseTimeToResetGame;
@@ -352,8 +372,6 @@ class FightGame {
               break;
           }
         }
-
-
       }
 
 
@@ -500,7 +518,7 @@ class FightGame {
 
   private:
     void defaultUser(){
-      Serial.println("FightGame >> prepare >> Start preparing player !");
+      dbg("FightGame >> prepare >> Start preparing player !");
       if(_player1.operator==(Player())){
         _player1 = Player("P01");
       }

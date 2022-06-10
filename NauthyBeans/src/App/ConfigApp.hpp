@@ -2,6 +2,10 @@
 #ifndef CONFIGAPP_H
 #define CONFIGAPP_H
 
+/// MCPDEVICE
+//////////////////////////////////
+
+/// BROCHE MCP DEVICE DESCRIPTION
 enum broche {
   pl100 =  0,
   pl101 =  1,
@@ -28,6 +32,18 @@ enum broche {
   pl208 =  6,
   pl209 =  7,
 };
+
+
+
+/// Afficheur LCD
+//////////////////////////////////
+
+// 7SEGMENT ADDR
+#define DISP_SYSTEM   1
+#define DISP_PLAYER1  0
+#define DISP_PLAYER2  2
+
+
 
 
 #endif  // CONFIGAPP_H

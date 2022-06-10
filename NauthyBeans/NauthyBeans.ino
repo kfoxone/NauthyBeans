@@ -240,7 +240,7 @@ double _AmpsRMS = 0;      // Valeur de courant en Ampère RMS
 
 
 /// FightGame
-FightGame *_fgame ;
+FightGame *_fightGame;// = new FightGame("Joleen", "Shelly", &_lc) ;
 
 
 
@@ -524,6 +524,15 @@ void setup_ws2812B(){
 }
 
 
+/** ***************************************************************************
+ * @brief Set the up ws2812B object
+ * 
+ * ****************************************************************************/
+void setup_games(){
+  // FightGame
+  _fightGame = new FightGame("Joleen", "Shelly", &_lc) ;
+}
+
 /* ****************************************************************************
      Setup
 
@@ -562,7 +571,9 @@ void setup() {
   //
   setup_ws2812B();
   Serial.println("NauthyBeans >> Setup << setup WS2812B Finished !");
-
+  // 
+  setup_games();
+  dbg("NauthyBeans >> Setup << setup games finished ! ");
 
   LCDMenuItem *infos = new LCDMenuItem("INFORMATIONS");
   LCDMenuItem *voltage = new LCDMenuItem("SOURCES (V)");
@@ -573,6 +584,7 @@ void setup() {
   _menu->add(infos);
   _menu->add(voltage);
   _menu->add(light);
+  dbg("NauthyBeans >> Setup << Setup Menu Finished !");
 
 
   elapseTime = onElapse(elapseTimePrev);
@@ -607,7 +619,7 @@ void loop_input(){
   //
   // FightGame
   //
-  _fgame->pushIn(IO24, IO25);
+  _fightGame->pushIn(&IO24, &IO25);
 
 
   //
@@ -630,7 +642,7 @@ void loop_output(){
   // 
   // FightGame
   //
-  _fgame->pushOut(IO25, IO26);
+  _fightGame->pushOut(IO25, IO26);
 
 }
 
@@ -667,13 +679,14 @@ void loop() {
   // READ INPUT STATE
   // 
   loop_input();
+  ndbg("NauthyBeans >> loop >> Loop input finished !");
 
 
 
   //
   // Process Fight Game
   //
-  _fgame->run(IO24, IO25, IO26);
+  _fightGame->run(IO24, IO25, IO26);
 
 
 
