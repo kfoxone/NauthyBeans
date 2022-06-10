@@ -321,23 +321,23 @@ void setup_i2cDevices(){
   if(scan.isAvalaible(0x24)){
     IO24 = MCPDevice(4, _bus24, "MCP23017 BUS24 A/B");
     beans.addDevice(IO24);
-    Serial.println("NauthyBeans >> setup_i2cDevices : IO24 Create and add !====");
+    dbg("NauthyBeans >> setup_i2cDevices : IO24 Create and add !====");
   }
   if(scan.isAvalaible(0x25)){
     IO25 = MCPDevice(5, _bus25, "MCP23017 BUS25 A/B");
     beans.addDevice(IO25);
-    Serial.println("NauthyBeans >> setup_i2cDevices : IO25 Create and add !====");
+    dbg("NauthyBeans >> setup_i2cDevices : IO25 Create and add !====");
   }
   if(scan.isAvalaible(0x26)){
     IO26 = MCPDevice(6, _bus26, "MCP23017 BUS26 A/B");
     beans.addDevice(IO26);
-    Serial.println("NauthyBeans >> setup_i2cDevices : IO26 Create and add !====");
+    dbg("NauthyBeans >> setup_i2cDevices : IO26 Create and add !====");
   }
 
   if(scan.isAvalaible(0x27)){
     lcdDevice = I2CDevice(0x27, "LCD2004 20x4");
     beans.addDevice(lcdDevice);
-    Serial.println("NauthyBeans >> setup_i2cDevices : IO24 Create and add !====");
+    dbg("NauthyBeans >> setup_i2cDevices : IO24 Create and add !====");
   }
 
 
@@ -400,7 +400,7 @@ bool setup_i2cValidation(){
   ScanI2C scan = ScanI2C();
   scan.listToMonitor();
   int nDevices = scan.availableDevices();
-  Serial.println("NauthyBeans >> setup_i2cValidation >> nombre d'appareil trouvé sur le bus = " + String(nDevices));
+  dbg("NauthyBeans >> setup_i2cValidation >> nombre d'appareil trouvé sur le bus = " + String(nDevices));
 
   std::list<I2CDevice> i2cDevices = beans.getI2CDevices();
   std::list<MCPDevice> mcpDevices = beans.getMCPDevices();
@@ -409,17 +409,17 @@ bool setup_i2cValidation(){
   int mcpDeviceCnt = mcpDevices.empty()?0:mcpDevices.size();
 
 
-  Serial.println("NauthyBeans >> setup_i2cValidation >> Nombre d'appareil définit (i2cDeviceCnt, mcpDeviceCnt) = (" + String(i2cDeviceCnt) + ", " + String(mcpDeviceCnt) + ")");
+  dbg("NauthyBeans >> setup_i2cValidation >> Nombre d'appareil définit (i2cDeviceCnt, mcpDeviceCnt) = (" + String(i2cDeviceCnt) + ", " + String(mcpDeviceCnt) + ")");
 
   if (nDevices == (i2cDeviceCnt + mcpDeviceCnt)) {
     msg = "All device founded.";
     lcd.lpush(msg);
     delay(250);
-    Serial.println("Tous les appareils sont disponible !");
+    dbg("Tous les appareils sont disponible !");
     return true;
   } else {
     lcd.lpush("/!\\ " + std::to_string((i2cDeviceCnt + mcpDeviceCnt)-nDevices) + " manque(nt) ! ");
-    Serial.println("NauthyBeans >> setup_i2cValidation >> /!\\ Un ou des appareils manquent : " + String((i2cDeviceCnt + mcpDeviceCnt) - nDevices) + " ! ");
+    dbg("NauthyBeans >> setup_i2cValidation >> /!\\ Un ou des appareils manquent : " + String((i2cDeviceCnt + mcpDeviceCnt) - nDevices) + " ! ");
     delay(3000);
 
 
@@ -434,7 +434,7 @@ bool setup_i2cValidation(){
         msg = "    Dec(" + std::to_string((*it).getAddr(1)) + ", 0x" + hex_string + ")";
         lcd.lpush(msg);
         msg = "    !!! Missing !!!";
-        Serial.println(String(i) + " : " +  (*it).getName().c_str() + "    Dec(" + std::to_string((*it).getAddr(1)).c_str() + "0x" + std::string("%X", (*it).getAddr(1)).c_str()+ ")    !!! Missing !!!");
+        dbg(String(i) + " : " +  (*it).getName().c_str() + "    Dec(" + std::to_string((*it).getAddr(1)).c_str() + "0x" + std::string("%X", (*it).getAddr(1)).c_str()+ ")    !!! Missing !!!");
         lcd.lpush(msg);
       }
       i++;
@@ -453,7 +453,7 @@ bool setup_i2cValidation(){
         msg = "    Dec(" + std::to_string((*it).getAddr()) + ", 0x" + hex_string + ")";
         lcd.lpush(msg);
         msg = "    !!! Missing !!!";
-        Serial.println(String(i) + " : " +  (*it).getName().c_str() + "    Dec(" + std::to_string((*it).getAddr()).c_str() + "0x" + std::string("%X", (*it).getAddr()).c_str()+ ")    !!! Missing !!!");
+        dbg(String(i) + " : " +  (*it).getName().c_str() + "    Dec(" + std::to_string((*it).getAddr()).c_str() + "0x" + std::string("%X", (*it).getAddr()).c_str()+ ")    !!! Missing !!!");
         lcd.lpush(msg);
       }
       i++;
@@ -461,7 +461,7 @@ bool setup_i2cValidation(){
     }
   }
 
-  Serial.println("NauthyBeans >> i2cValidation : end...");
+  dbg("NauthyBeans >> i2cValidation : end...");
 
 }
 
@@ -475,7 +475,7 @@ void setup_SPI(){
   lcd.lreturn();
   lcd.lpush("SPI device found...");
   lcd.lpush("==> " + std::to_string(_lc.dispCounter()) + " of SPI Dev");
-  Serial.println("SPI Device found... ===> " + String(_lc.dispCounter()) + " of SPI DEV");
+  dbg("SPI Device found... ===> " + String(_lc.dispCounter()) + " of SPI DEV");
 
   _lc.printText("HELLOP01", DISP_PLAYER1);
   _lc.printText("HELLOSYS", DISP_SYSTEM);
@@ -556,21 +556,21 @@ void setup() {
 
   // Components
   setup_lcd();
-  Serial.println("NauthyBeans >> setup << setup lcd finished...");
+  dbg("NauthyBeans >> setup << setup lcd finished...");
   setup_i2cDevices();
-  Serial.println("NauthyBeans >> setup << setup i2c Devices finished...");
+  dbg("NauthyBeans >> setup << setup i2c Devices finished...");
   setup_SPI();
-  Serial.println("NauthyBeans >> setup << setup SPI finished...");
+  dbg("NauthyBeans >> setup << setup SPI finished...");
   setup_rotationCommand();
-  Serial.println("NauthyBeans >> setup << setup rotation command finished...");
+  dbg("NauthyBeans >> setup << setup rotation command finished...");
   setup_i2cValidation();
-  Serial.println("NauthyBeans >> setup << i2C validation is finished...");
+  dbg("NauthyBeans >> setup << i2C validation is finished...");
   // 
   setup_ACS712();
-  Serial.println("NauthyBeans >> setup << setup ACS712 Finished ! ");
+  dbg("NauthyBeans >> setup << setup ACS712 Finished ! ");
   //
   setup_ws2812B();
-  Serial.println("NauthyBeans >> Setup << setup WS2812B Finished !");
+  dbg("NauthyBeans >> Setup << setup WS2812B Finished !");
   // 
   setup_games();
   dbg("NauthyBeans >> Setup << setup games finished ! ");
@@ -607,13 +607,13 @@ void loop_input(){
   // if(!IO24.isNull()){
   //   IO24.readInput();
   // }else{
-  //   Serial.println("Unable to read IO24 : isNUll");
+  //   dbg("Unable to read IO24 : isNUll");
   // }
 
   // if(!IO25.isNull()){
   //   IO25.readInput();
   // }else{
-  //   Serial.println("Unable to read IO25 : isNUll");
+  //   dbg("Unable to read IO25 : isNUll");
   // }
 
   //
@@ -760,7 +760,7 @@ void processAmps(){
     // static uint64_t timeToReadCurrent = millis();
   // if(millis()-timeToReadCurrent>= 1000){
   //   double AmpsRMS = acs712.Process();
-  //   Serial.println("Amps RMS: " + String(AmpsRMS));
+  //   dbg("Amps RMS: " + String(AmpsRMS));
   //   timeToReadCurrent = millis();
   // }
 
@@ -769,7 +769,7 @@ void processAmps(){
   if(millis()-adcTimeOut >= 5000){
     sensorValue = analogRead(sensorPin);
     _AmpsRMS = 1.00*sensorValue/1024.0;
-    Serial.println("Loop >> Sensor Input = " + String(sensorValue) + " Value converte by 1024 = " + String(_AmpsRMS));
+    dbg("Loop >> Sensor Input = " + String(sensorValue) + " Value converte by 1024 = " + String(_AmpsRMS));
     adcTimeOut = millis();
   }
 }

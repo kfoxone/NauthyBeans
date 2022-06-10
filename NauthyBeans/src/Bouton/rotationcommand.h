@@ -23,27 +23,24 @@
 class RotationCommand {
 
 public: 
-  RotationCommand(uint8_t sw, uint8_t dt, uint8_t clk){
-    pinMode(sw, INPUT_PULLUP);
-    pinMode(clk, INPUT);
-    pinMode(dt, INPUT);
+  RotationCommand(uint8_t sw, uint8_t dt, uint8_t clk):_swpin(sw), _dtpin(dt), _clkpin(clk){
+    pinMode(_swpin, INPUT_PULLUP);
+    pinMode(_dtpin, INPUT);
+    pinMode(_clkpin, INPUT);
   }
 
 
   void initialize(){
-    // pinMode( SW, INPUT_PULLUP );
-    // pinMode (CLK, INPUT);
-    // pinMode (DT, INPUT);
+    // pinMode(_swpin, INPUT_PULLUP);
+    // pinMode(_dtpin, INPUT);
+    // pinMode(_clkpin, INPUT);
     // //_encoderCounter = digitalRead(CLK);
   }
 
 
   bool isSWOn(){
     _switchLastSate = digitalRead(_swpin)==HIGH?false:true;
-    if (_switchLastSate == false) {
-      return true;
-    }
-    return false;
+    return _switchLastSate;
   }
 
 
@@ -58,6 +55,7 @@ public:
 
     if (vclk != _vclk or vdt != _vdt) {
       ndbg("RotationCommand >> doRun <<  [CLK, DT] = [" + String(vclk) + "," + String(vdt) + "]");
+      _encoderChanged = true;
     }else{
       _encoderChanged = false;
       return;
@@ -84,13 +82,11 @@ public:
       clkFirst = false;
       _encoderCounter++;
       _encoderMemory = _encoderCounter -1;
-      _encoderChanged=true;
     }else if(dtFirst and vclk==0){
       ndbg("RotationCommand >> doRun << Go Left !");
       dtFirst = false;
       _encoderCounter--;
       _encoderMemory = _encoderCounter +1;
-      _encoderChanged=true;
     }
 
 
